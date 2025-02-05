@@ -1,0 +1,6 @@
+name: WebPanel
+version: '1.0-SNAPSHOT'
+main: com.beauver.minecraft.plugins.webPanel.WebPanel
+api-version: '1.21'
+load: STARTUP
+authors: [ Beauver ]

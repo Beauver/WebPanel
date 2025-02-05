@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>WebPanel - Player List</title>
+        <link rel="stylesheet" href="css/players.css">
+    </head>
+    <body>
+        <div class="navbar">
+            <a href="index.html">Console</a>
+            <a href="files.html">Files</a>
+            <a href="players.html">Players</a>
+        </div>
+
+        <div class="playerlist">
+            <h2>Current Players:</h2>
+            <div class="player-menu">
+                <p id="playerCount">Loading...</p>
+                <ul id="playerList"></ul>
+            </div>
+
+        </div>
+
+
+        <script>
+            function loadPlayers() {
+                fetch("/getPlayers")
+                    .then(response => response.json())
+                    .then(data => {
+                        // Update the player count
+                        document.getElementById("playerCount").textContent = `Players online: ${data.playerCount}/${data.maxPlayers}`;
+
+                        // Clear the existing list and add players
+                        const playerList = document.getElementById("playerList");
+                        playerList.innerHTML = ""; // Clear the existing list
+
+                        if (data.players && data.players.length > 0) {
+                            data.players.forEach(player => {
+                                const listItem = document.createElement("li");
+                                listItem.textContent = player;
+                                playerList.appendChild(listItem);
+                            });
+                        } else {
+                            playerList.innerHTML = "<li>No players online</li>"; // Show a message if no players
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error loading players:", error);
+                    });
+            }
+
+            // Call the function to load players when the page loads
+            window.onload = loadPlayers;
+            setInterval(loadPlayers, 5000);
+        </script>
+    </body>
+</html>

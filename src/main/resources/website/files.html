@@ -1,0 +1,239 @@
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>WebPanel - Files</title>
+        <link rel="stylesheet" href="css/files.css">
+    </head>
+    <body>
+        <div class="navbar">
+            <a href="index.html">Console</a>
+            <a href="files.html">Files</a>
+            <a href="players.html">Players</a>
+        </div>
+
+        <div class="filesystem">
+            <button class="floating-button" onclick="createFolder()">Create Folder</button>
+            <button class="floating-button" onclick="uploadFile()">Upload File</button>
+            <button class="floating-button" onclick="folderUp()">Folder Up</button>
+            <h2>File Browser:</h2>
+
+            <div class="file-gui">
+                <p id="currentPath">Loading...</p>
+                <hr>
+                <ul id="fileList"></ul>
+
+            </div>
+        </div>
+
+    </body>
+
+        <script>
+            function loadFiles(path) {
+                fetch(`/getFiles`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded"
+                    },
+                    body: `path=${path}`
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        const currentPath = document.getElementById("currentPath");
+                        const fileList = document.getElementById("fileList");
+
+                        currentPath.textContent = data.path;
+                        fileList.innerHTML = "";
+
+                        data.folders.forEach(folder => {
+                            const li = document.createElement("li");
+                            const a = document.createElement("a");
+                            a.href = "#";
+                            a.textContent = folder;
+                            a.onclick = () => loadFiles(data.path.replace(/^server\//, "") + folder + "/");
+                            li.appendChild(a);
+
+                            const deleteButton = document.createElement("button");
+                            deleteButton.className = "delete-button";
+                            deleteButton.textContent = "Delete";
+                            deleteButton.onclick = () => deleteFile(data.path.replace(/^server\//, "") + folder + "/");
+                            li.appendChild(deleteButton);
+
+                            fileList.appendChild(li);
+                        });
+
+                        data.files.forEach(file => {
+                            const li = document.createElement("li");
+                            const a = document.createElement("a");
+                            a.href = "#";
+                            a.onclick = () => downloadFile(data.path.replace(/^server\//, "") + file);
+                            a.textContent = file;
+                            li.appendChild(a);
+
+                            const deleteButton = document.createElement("button");
+                            deleteButton.className = "delete-button";
+                            deleteButton.textContent = "Delete";
+                            deleteButton.onclick = () => deleteFile(data.path.replace(/^server\//, "") + file);
+                            li.appendChild(deleteButton);
+
+                            const downloadButton = document.createElement("button");
+                            downloadButton.className = "download-button";
+                            downloadButton.textContent = "Download";
+                            downloadButton.onclick = () => downloadFile(data.path.replace(/^server\//, "") + file);
+                            li.appendChild(downloadButton);
+
+                            fileList.appendChild(li);
+                        });
+                    })
+                    .catch(error => {
+                        console.error("Error loading files:", error);
+                    });
+            }
+
+
+            function folderUp() {
+                const currentPath = document.getElementById("currentPath").textContent.replace(/^server\//, "");
+                const pathParts = currentPath.split("/").filter(part => part !== "");
+                if (pathParts.length > 1) {
+                    pathParts.pop();
+                    loadFiles(pathParts.join("/") + "/");
+                } else {
+                    loadFiles(".");
+                }
+            }
+
+            function uploadFile() {
+                const input = document.createElement("input");
+                input.type = "file";
+                input.onchange = () => {
+                    const file = input.files[0];
+                    const formData = new FormData();
+                    const currentPath = document.getElementById("currentPath").textContent.replace(/^server\//, "");
+                    formData.append("file", file);
+                    formData.append("path", currentPath);
+                    formData.append("filename", file.name)
+
+                    fetch("/getApiKey", { method: "GET" })
+                        .then(async response => {
+                            const apiKey = await response.text();
+                            return fetch("/uploadFile", {
+                                method: "POST",
+                                headers: {
+                                    "Authorization": `Bearer ${apiKey}`
+                                },
+                                body: formData
+                            });
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`Server error: ${response.statusText}`);
+                            }
+                            return response.text();
+                        })
+                        .then(data => {
+                            console.log("File uploaded successfully:", data);
+                            loadFiles(currentPath);
+                        })
+                        .catch(error => {
+                            console.error("Error uploading file:", error);
+                        });
+                };
+                input.click();
+            }
+
+            function createFolder() {
+                const folderName = prompt("Enter the name of the new folder:");
+                if (folderName) {
+                    const currentPath = document.getElementById("currentPath").textContent.replace(/^server\//, "");
+
+                    fetch(`/getApiKey`, {method: "GET"})
+                        .then(async response => {
+                            const apiKey = await response.text();
+                            return fetch("/createFolder", {
+                                method: "POST",
+                                headers: {
+                                    "Authorization": `Bearer ${apiKey}`,
+                                    "Content-Type": "application/x-www-form-urlencoded"
+                                },
+                                body: `path=${currentPath}&folderName=${folderName}`
+                            });
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`Server error: ${response.statusText}`);
+                            }
+                            return response.text();
+                        })
+                        .then(data => {
+                            console.log("Folder created successfully:", data);
+                            loadFiles(currentPath);
+                        })
+                        .catch(error => {
+                            console.error("Error creating folder:", error);
+                        });
+                }
+            }
+
+            function deleteFile(filePath) {
+                if (confirm(`Are you sure you want to delete the file or directory: ${filePath}?`)) {
+                    fetch(`/getApiKey`, { method: "GET" })
+                        .then(async response => {
+                            const apiKey = await response.text();
+                            return fetch("/deleteFile", {
+                                method: "POST",
+                                headers: {
+                                    "Authorization": `Bearer ${apiKey}`,
+                                    "Content-Type": "application/x-www-form-urlencoded"
+                                },
+                                body: `path=${filePath}`
+                            });
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`Server error: ${response.statusText}`);
+                            }
+                            return response.text();
+                        })
+                        .then(data => {
+                            console.log("File or directory deleted successfully:", data);
+                            loadFiles(document.getElementById("currentPath").textContent.replace(/^server\//, ""));
+                        })
+                        .catch(error => {
+                            console.error("Error deleting file or directory:", error);
+                        });
+                }
+            }
+
+            function downloadFile(filePath) {
+                fetch(`/getApiKey`, { method: "GET" })
+                    .then(async response => {
+                        const apiKey = await response.text();
+                        return fetch(`/downloadFile?path=${filePath}`, {
+                            headers: {
+                                "Authorization": `Bearer ${apiKey}`
+                            }
+                        });
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`Server error: ${response.statusText}`);
+                        }
+                        return response.blob();
+                    })
+                    .then(blob => {
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = filePath.split("/").pop();
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    })
+                    .catch(error => {
+                        console.error("Error downloading file:", error);
+                    });
+            }
+
+            // Call the function to load files when the page loads
+            window.onload = () => loadFiles(".");
+        </script>
+
+</html>

@@ -1,0 +1,55 @@
+*{
+    --background-color: #5D2689;
+    --navbar-color: #3C096C;
+    --text-color: #C77DFF;
+
+    margin: 0;
+    font-family: "Comic Sans MS", serif;
+}
+
+body{
+    background-color: var(--background-color);
+}
+
+h2{
+    color: white;
+}
+
+.navbar{
+    background-color: var(--navbar-color);
+    padding: 1em;
+    text-align: center;
+}
+.navbar, a{
+    word-spacing: 4em;
+    font-size: 1em;
+    color: white;
+    text-decoration: none;
+}
+.navbar, a:hover{
+    color: #C77DFF;
+    font-size: 1.2em;
+}
+
+.playerlist{
+    margin: 5% 10%;
+    background-color: var(--background-color);
+}
+
+.playerlist p, ul{
+    font-family: monospace, monospace;
+    font-size: 1.3em;
+    color: var(--text-color);
+}
+
+.player-menu{
+    background-color: var(--navbar-color);
+    padding: 1em;
+    text-align: center;
+    height: 100vh;
+    overflow: auto;
+}
+.player-menu ul{
+    list-style-type: none;
+    padding: 0;
+}

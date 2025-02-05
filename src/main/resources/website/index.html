@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <link rel="stylesheet" href="css/index.css">
+
+        <meta charset="UTF-8">
+        <title>WebPanel - Console</title>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <a href="index.html">Console</a>
+            <a href="files.html">Files</a>
+            <a href="players.html">Players</a>
+        </div>
+
+        <div class="console">
+            <div class="buttons">
+                <button onclick="stopServer()">Stop Server</button>
+            </div>
+            <h2>Console Output:</h2>
+            <div class="console-lines">
+                <pre id="consoleOutput">Loading...</pre>
+            </div>
+            <div class="console-input">
+                <label>
+                    <input id="consoleInput" type="text" onkeydown="if(event.key === 'Enter'){sendToConsole()}" placeholder="Enter a command...">
+                </label>
+                <button id="command-sender" onclick="sendToConsole()">Send</button>
+            </div>
+        </div>
+    </body>
+
+    <script>
+        function getConsole() {
+            fetch("/getConsoleOutput")
+                .then(response => response.json()) // Parse the JSON response
+                .then(data => {
+                    console.log(data);
+                    const consoleOutput = document.getElementById("consoleOutput");
+                    consoleOutput.textContent = data.messages.join("\n");
+                    consoleOutput.scrollTo(0, consoleOutput.scrollHeight);
+                })
+                .catch(error => {
+                    console.error("Error loading console:", error);
+                });
+        }
+
+        function sendToConsole() {
+            const inputField = document.getElementById("consoleInput")
+            const command = inputField.value;
+            if(command === "") return;
+
+            fetch("/getApiKey", {method: "GET"})
+                .then(async response => {
+                    fetch("/sendToConsole", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/x-www-form-urlencoded",
+                            "Authorization": `Bearer ${await response.text()}`
+                        },
+                        body: `command=${encodeURIComponent(command)}`
+                    })
+                        .catch(error => {
+                            console.error("Fetch error:", error);
+                            alert("Error: " + error.message);
+                        });
+                });
+
+            inputField.value = "";
+        }
+
+        function stopServer() {
+            fetch("/getApiKey", {method: "GET"})
+                .then(async response => {
+                    fetch("/stopServer", {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `Bearer ${await response.text()}`
+                        }
+                    })
+                        .then(async response => {
+                            if (response.ok) {
+                                alert("Stopped Server");
+                            } else {
+                                alert("Failed to stop server");
+                            }
+                        })
+                        .catch(error => {
+                            console.error("Fetch error:", error);
+                            alert("Error: " + error.message);
+                        });
+                });
+        }
+
+        function scrollToBottomOfConsole(){
+            const consoleOutput = document.getElementById("consoleOutput");
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            console.log("Scrolled to bottom");
+        }
+
+        // Call getConsole to load console output when the page loads
+        window.onload = function() {
+            getConsole();
+            scrollToBottomOfConsole();
+            setInterval(getConsole, 1000);
+        };
+    </script>
+</html>

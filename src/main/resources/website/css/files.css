@@ -1,0 +1,77 @@
+*{
+    --background-color: #5D2689;
+    --navbar-color: #3C096C;
+    --text-color: #C77DFF;
+
+    margin: 0;
+    font-family: "Comic Sans MS", serif;
+}
+
+body{
+    background-color: var(--background-color);
+}
+
+h2{
+    color: white;
+}
+
+.navbar{
+    background-color: var(--navbar-color);
+    padding: 1em;
+    text-align: center;
+}
+.navbar, a{
+    word-spacing: 4em;
+    font-size: 1em;
+    color: white;
+    text-decoration: none;
+}
+.navbar, a:hover{
+    color: #C77DFF;
+    font-size: 1.2em;
+}
+
+.filesystem{
+    margin: 5% 10%;
+    background-color: var(--background-color);
+}
+.filesystem p, ul{
+    font-family: monospace, monospace;
+    font-size: 1.3em;
+    color: var(--text-color);
+}
+
+.floating-button{
+    float: right;
+    background-color: var(--navbar-color);
+    color: var(--text-color);
+    border: none;
+    padding: 5px;
+    margin-left: 4px;
+}
+
+.file-gui{
+    background-color: var(--navbar-color);
+    height: 80vh;
+    width: 100%;
+    padding: 10px;
+    overflow: auto;
+}
+.file-gui ul{
+    font-family: monospace, monospace;
+    list-style-type: none;
+    padding: 0;
+    text-color: var(--text-color);
+    font-size: 1em;
+}
+.file-gui button{
+    float: right;
+    padding: 0;
+    margin-left: 5px;
+    background-color: var(--navbar-color);
+    border: none;
+    color: var(--text-color);
+}
+.file-gui button:hover{
+    color: white;
+}
