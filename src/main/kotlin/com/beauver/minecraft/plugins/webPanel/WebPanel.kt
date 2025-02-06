@@ -8,11 +8,12 @@ import org.bukkit.plugin.java.JavaPlugin
 class WebPanel : JavaPlugin() {
 
     override fun onEnable() {
+        plugin = this;
+
         logger.info("|---------[ WebPanel ]---------|")
         logger.info("|                              |")
 
         saveDefaultConfig()
-        plugin = this;
 
         // Plugin startup logic
         registerCommands()
