@@ -29,12 +29,11 @@
 
         <script>
             function loadFiles(path) {
-                fetch(`/getFiles`, {
-                    method: "POST",
+                fetch(`/api/getFiles?path=${path}`, {
+                    method: "GET",
                     headers: {
                         "Content-Type": "application/x-www-form-urlencoded"
-                    },
-                    body: `path=${path}`
+                    }
                 })
                     .then(response => response.json())
                     .then(data => {
@@ -112,10 +111,10 @@
                     formData.append("path", currentPath);
                     formData.append("filename", file.name)
 
-                    fetch("/getApiKey", { method: "GET" })
+                    fetch("/api/getApiKey", { method: "GET" })
                         .then(async response => {
                             const apiKey = await response.text();
-                            return fetch("/uploadFile", {
+                            return fetch("/api/uploadFile", {
                                 method: "POST",
                                 headers: {
                                     "Authorization": `Bearer ${apiKey}`
@@ -145,10 +144,10 @@
                 if (folderName) {
                     const currentPath = document.getElementById("currentPath").textContent.replace(/^server\//, "");
 
-                    fetch(`/getApiKey`, {method: "GET"})
+                    fetch(`/api/getApiKey`, {method: "GET"})
                         .then(async response => {
                             const apiKey = await response.text();
-                            return fetch("/createFolder", {
+                            return fetch("/api/createFolder", {
                                 method: "POST",
                                 headers: {
                                     "Authorization": `Bearer ${apiKey}`,
@@ -175,16 +174,15 @@
 
             function deleteFile(filePath) {
                 if (confirm(`Are you sure you want to delete the file or directory: ${filePath}?`)) {
-                    fetch(`/getApiKey`, { method: "GET" })
+                    fetch(`/api/getApiKey`, { method: "GET" })
                         .then(async response => {
                             const apiKey = await response.text();
-                            return fetch("/deleteFile", {
-                                method: "POST",
+                            return fetch(`/api/deleteFile?path=${filePath}`, {
+                                method: "DELETE",
                                 headers: {
                                     "Authorization": `Bearer ${apiKey}`,
                                     "Content-Type": "application/x-www-form-urlencoded"
-                                },
-                                body: `path=${filePath}`
+                                }
                             });
                         })
                         .then(response => {
@@ -204,10 +202,10 @@
             }
 
             function downloadFile(filePath) {
-                fetch(`/getApiKey`, { method: "GET" })
+                fetch(`/api/getApiKey`, { method: "GET" })
                     .then(async response => {
                         const apiKey = await response.text();
-                        return fetch(`/downloadFile?path=${filePath}`, {
+                        return fetch(`/api/downloadFile?path=${filePath}`, {
                             headers: {
                                 "Authorization": `Bearer ${apiKey}`
                             }

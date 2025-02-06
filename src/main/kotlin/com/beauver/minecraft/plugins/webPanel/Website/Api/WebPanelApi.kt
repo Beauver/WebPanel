@@ -10,10 +10,34 @@ interface WebPanelApi {
      * All in 1 method to respond to the request
      */
     fun respond(session: IHTTPSession): Response
+
+    /**
+     * Gets data for the request. Meant for GET requests
+     */
     fun getData(): Any{
         return Any();
     }
+
+    /**
+     * Gets data for the request. Meant for GET requests
+     * @param session The session data
+     */
     fun getData(session: IHTTPSession): Any{
+        return Any();
+    }
+
+    /**
+     * Executes something. Meant for POST requests
+     */
+    fun execute(): Any {
+        return Any();
+    }
+
+    /**
+     * Executes something. Meant for POST requests
+     * @param session The session data
+     */
+    fun execute(session: IHTTPSession): Any{
         return Any();
     }
 

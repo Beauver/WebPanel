@@ -1,6 +1,10 @@
 package com.beauver.minecraft.plugins.webPanel.Website
 
 import com.beauver.minecraft.plugins.webPanel.WebPanel
+import com.beauver.minecraft.plugins.webPanel.Website.Api.Protected.*
+import com.beauver.minecraft.plugins.webPanel.Website.Api.Public.GetApiKeyAPI
+import com.beauver.minecraft.plugins.webPanel.Website.Api.Public.GetConsoleOutputAPI
+import com.beauver.minecraft.plugins.webPanel.Website.Api.Public.GetFilesAPI
 import com.beauver.minecraft.plugins.webPanel.Website.Api.Public.GetPlayersAPI
 import com.beauver.minecraft.plugins.webPanel.Website.Pages.CSSPages
 import com.beauver.minecraft.plugins.webPanel.Website.Pages.HTMLPages
@@ -17,11 +21,6 @@ import kotlin.io.path.name
 
 class PanelWebsite() : NanoHTTPD(WebPanel.plugin.config.getInt("website.port")) {
 
-    companion object{
-        val apiKeysActive = mutableMapOf<String, String>()
-        val trustedIPs: MutableList<String> = WebPanel.plugin.config.getStringList("websites.apikey.permittedIPs")
-    }
-
     init {
         start(SOCKET_READ_TIMEOUT, false)
         WebPanel.plugin.logger.info("Started Website")
@@ -29,289 +28,55 @@ class PanelWebsite() : NanoHTTPD(WebPanel.plugin.config.getInt("website.port")) 
 
     override fun serve(session: IHTTPSession): Response {
         when (session.uri) {
+            //HTML Pages
             "/", "/index.html", "/index", "/console", "/panel" -> return HTMLPages().serve("website/index.html")
             "/players.html", "/players" -> return HTMLPages().serve("website/players.html")
             "/files.html", "/files" -> return HTMLPages().serve("website/files.html")
 
+            //CSS Pages
             "/css/index.css" -> return CSSPages().serve("website/css/index.css")
             "/css/files.css" -> return CSSPages().serve("website/css/files.css")
             "/css/players.css" -> return CSSPages().serve("website/css/players.css")
 
+            //GET
             "/api/getPlayers" -> return GetPlayersAPI().respond(session)
-            "/api/getConsoleOutput" -> return GetPlayersAPI().respond(session)
+            "/api/getConsoleOutput" -> return GetConsoleOutputAPI().respond(session)
+            "/api/getApiKey" -> return GetApiKeyAPI().respond(session)
+            "/api/getFiles" -> return GetFilesAPI().respond(session)
+            "/api/downloadFile" -> return DownloadFileAPI().respond(session)
+
+            //POST
+            "/api/sendToConsole" -> return SendToConsoleAPI().respond(session)
+            "/api/stopServer" -> return StopServerAPI().respond(session)
+            "/api/uploadFile" -> return UploadFilesAPI().respond(session)
+            "/api/createFolder" -> return CreateFolderAPI().respond(session)
+
+            //DELETE
+            "/api/deleteFile" -> return DeleteFileAPI().respond(session)
+
+            else -> return super.serve(session)
         }
-
-        if (session.uri == "/sendToConsole" && session.method == Method.POST) {
-            val headers = session.headers
-            val apiKey = headers["authorization"]?.substringAfter("Bearer ") ?: return newFixedLengthResponse(Response.Status.UNAUTHORIZED, "text/plain", "Missing API Key")
-
-            val ipAddress = session.headers["remote-addr"] ?: return newFixedLengthResponse(Response.Status.FORBIDDEN, "text/plain", "Forbidden")
-
-            if (apiKeysActive[ipAddress] != apiKey) {
-                return newFixedLengthResponse(Response.Status.UNAUTHORIZED, "text/plain", "Invalid API Key")
-            } else {
-                apiKeysActive.remove(ipAddress)
-            }
-
-            session.parseBody(null)
-            val parms: Map<String, List<String>> = session.parameters
-            val command = parms["command"]?.get(0) ?: ""
-
-            Bukkit.getScheduler().runTask(WebPanel.plugin, Runnable {
-                Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command)
-            });
-
-            return newFixedLengthResponse(Response.Status.OK, "text/plain", "")
-        }
-
-        if (session.uri == "/stopServer" && session.method == Method.POST) {
-            val headers = session.headers
-            val apiKey = headers["authorization"]?.substringAfter("Bearer ") ?: return newFixedLengthResponse(Response.Status.UNAUTHORIZED, "text/plain", "Missing API Key")
-
-            val ipAddress = session.headers["remote-addr"] ?: return newFixedLengthResponse(Response.Status.FORBIDDEN, "text/plain", "Forbidden")
-
-            if (apiKeysActive[ipAddress] != apiKey) {
-                return newFixedLengthResponse(Response.Status.UNAUTHORIZED, "text/plain", "Invalid API Key")
-            } else {
-                apiKeysActive.remove(ipAddress)
-            }
-
-            WebPanel.plugin.server.shutdown()
-            return newFixedLengthResponse(Response.Status.OK, "text/plain", "Stopped Server")
-        }
-
-        if (session.uri == "/getApiKey" && session.method == Method.GET) {
-            val ipAddress = session.headers["remote-addr"] ?: return newFixedLengthResponse(Response.Status.FORBIDDEN, "text/plain", "Forbidden")
-
-            if (!trustedIPs.any { it == ipAddress || (it.contains("-") && isIpInRange(ipAddress, it)) }) {
-                return newFixedLengthResponse(Response.Status.UNAUTHORIZED, "text/plain", "Unauthorized")
-            }
-
-            val apiKey = generateSecureApiKey()
-            apiKeysActive[ipAddress] = apiKey
-
-            // Auto-expire key
-            Bukkit.getScheduler().runTaskLater(WebPanel.plugin, Runnable {
-                apiKeysActive.remove(ipAddress)
-            }, WebPanel.plugin.config.getLong("website.apikey.timeoutSeconds") * 20L)
-
-            return newFixedLengthResponse(Response.Status.OK, "text/plain", apiKey)
-        }
-
-        if(session.uri == "/getFiles" && session.method == Method.POST){
-            session.parseBody(null)
-            val parms: Map<String, List<String>> = session.parameters
-            val givenPath = parms["path"]?.get(0)
-
-            var pathString = ""
-            val folders = mutableListOf<Path>()
-            val files = mutableListOf<File>()
-
-            if (givenPath == ".") {
-                val path = Bukkit.getWorldContainer().toPath()
-                Files.list(path).use { stream ->
-                    stream.forEach {
-                        if (Files.isDirectory(it)) {
-                            folders.add(it)
-                        } else {
-                            files.add(it.toFile())
-                        }
-                    }
-                }
-                pathString = "server/"
-            }else{
-                val path = Paths.get(Bukkit.getWorldContainer().path.toString() + "/" + givenPath)
-                Files.list(path).use { stream ->
-                    stream.forEach {
-                        if (Files.isDirectory(it)) {
-                            folders.add(it)
-                        } else {
-                            files.add(it.toFile())
-                        }
-                    }
-                }
-                pathString = "server/$givenPath"
-            }
-
-            val jsonResponse = """{
-                "path": "$pathString",
-                "folders": [${folders.joinToString(",") { "\"${it.name}\"" }}],
-                "files": [${files.joinToString(",") { "\"${it.name}\"" }}]
-            }"""
-
-            return newFixedLengthResponse(Response.Status.OK, "application/json", jsonResponse)
-        }
-
-        if (session.uri == "/uploadFile" && session.method == Method.POST) {
-            val headers = session.headers
-            val apiKey = headers["authorization"]?.substringAfter("Bearer ")
-                ?: return newFixedLengthResponse(Response.Status.UNAUTHORIZED, "text/plain", "Missing API Key")
-
-            val ipAddress = session.remoteIpAddress
-                ?: return newFixedLengthResponse(Response.Status.FORBIDDEN, "text/plain", "Forbidden")
-
-            if (apiKeysActive[ipAddress] != apiKey) {
-                return newFixedLengthResponse(Response.Status.UNAUTHORIZED, "text/plain", "Invalid API Key")
-            } else {
-                apiKeysActive.remove(ipAddress)
-            }
-
-            val files = mutableMapOf<String, String>()
-            val parameters = session.parameters
-
-            try {
-                session.parseBody(files)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, "text/plain", "Failed to parse request body")
-            }
-
-            val tempFilePath = files["file"]
-                ?: return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain", "File not found in request body")
-
-            val tempFile = File(tempFilePath)
-
-            if (!tempFile.exists()) {
-                return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain", "Uploaded file does not exist")
-            }
-
-            val relativePath = parameters["path"]?.get(0) ?: ""
-            val originalFileName = parameters["filename"]?.get(0) ?: tempFile.name
-            val destinationPath = Paths.get(Bukkit.getWorldContainer().path.toString(), relativePath, originalFileName)
-
-            try {
-                Files.createDirectories(destinationPath.parent)
-                tempFile.inputStream().use { input ->
-                    Files.newOutputStream(destinationPath).use { output ->
-                        input.copyTo(output)
-                    }
-                }
-
-                tempFile.delete()
-
-            } catch (e: IOException) {
-                e.printStackTrace()
-                return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, "text/plain", "Failed to save file")
-            }
-
-            return newFixedLengthResponse(Response.Status.OK, "text/plain", "File uploaded successfully to $destinationPath")
-        }
-
-        if (session.uri == "/deleteFile" && session.method == Method.POST) {
-            val headers = session.headers
-            val apiKey = headers["authorization"]?.substringAfter("Bearer ")
-                ?: return newFixedLengthResponse(Response.Status.UNAUTHORIZED, "text/plain", "Missing API Key")
-
-            val ipAddress = session.remoteIpAddress
-                ?: return newFixedLengthResponse(Response.Status.FORBIDDEN, "text/plain", "Forbidden")
-
-            if (apiKeysActive[ipAddress] != apiKey) {
-                return newFixedLengthResponse(Response.Status.UNAUTHORIZED, "text/plain", "Invalid API Key")
-            } else {
-                apiKeysActive.remove(ipAddress)
-            }
-
-            session.parseBody(null)
-            val parms: Map<String, List<String>> = session.parameters
-            val filePath = parms["path"]?.get(0) ?: return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain", "Missing file path")
-
-            val file = File(Bukkit.getWorldContainer(), filePath)
-            if (!file.exists()) {
-                return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "File not found")
-            }
-
-            return try {
-                if (file.isDirectory) {
-                    file.deleteRecursively()
-                } else {
-                    file.delete()
-                }
-                newFixedLengthResponse(Response.Status.OK, "text/plain", "File or directory deleted successfully")
-            } catch (e: Exception) {
-                e.printStackTrace()
-                newFixedLengthResponse(Response.Status.INTERNAL_ERROR, "text/plain", "Failed to delete file or directory")
-            }
-        }
-
-        if (session.uri == "/createFolder" && session.method == Method.POST) {
-            val headers = session.headers
-            val apiKey = headers["authorization"]?.substringAfter("Bearer ")
-                ?: return newFixedLengthResponse(Response.Status.UNAUTHORIZED, "text/plain", "Missing API Key")
-
-            val ipAddress = session.remoteIpAddress
-                ?: return newFixedLengthResponse(Response.Status.FORBIDDEN, "text/plain", "Forbidden")
-
-            if (apiKeysActive[ipAddress] != apiKey) {
-                return newFixedLengthResponse(Response.Status.UNAUTHORIZED, "text/plain", "Invalid API Key")
-            } else {
-                apiKeysActive.remove(ipAddress)
-            }
-
-            session.parseBody(null)
-            val parms: Map<String, List<String>> = session.parameters
-            val currentPath = parms["path"]?.get(0) ?: return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain", "Missing path")
-            val folderName = parms["folderName"]?.get(0) ?: return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain", "Missing folder name")
-
-            val folderPath = Paths.get(Bukkit.getWorldContainer().path.toString(), currentPath, folderName)
-
-            return try {
-                Files.createDirectories(folderPath)
-                newFixedLengthResponse(Response.Status.OK, "text/plain", "Folder created successfully")
-            } catch (e: IOException) {
-                e.printStackTrace()
-                newFixedLengthResponse(Response.Status.INTERNAL_ERROR, "text/plain", "Failed to create folder")
-            }
-        }
-
-        if(session.uri == "/downloadFile" && session.method == Method.GET) {
-            val headers = session.headers
-            val apiKey = headers["authorization"]?.substringAfter("Bearer ")
-                ?: return newFixedLengthResponse(Response.Status.UNAUTHORIZED, "text/plain", "Missing API Key")
-
-            val ipAddress = session.remoteIpAddress
-                ?: return newFixedLengthResponse(Response.Status.FORBIDDEN, "text/plain", "Forbidden")
-
-            if (apiKeysActive[ipAddress] != apiKey) {
-                return newFixedLengthResponse(Response.Status.UNAUTHORIZED, "text/plain", "Invalid API Key")
-            } else {
-                apiKeysActive.remove(ipAddress)
-            }
-
-            val filePath = session.parameters["path"]?.get(0)
-                ?: return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain", "Missing file path")
-
-            val file = File(Bukkit.getWorldContainer(), filePath)
-            if (!file.exists() || file.isDirectory) {
-                return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "File not found")
-            }
-
-            return try {
-                val inputStream = file.inputStream()
-                newFixedLengthResponse(Response.Status.OK, "application/octet-stream", inputStream, file.length())
-            } catch (e: IOException) {
-                e.printStackTrace()
-                newFixedLengthResponse(Response.Status.INTERNAL_ERROR, "text/plain", "Failed to download file")
-            }
-        }
-
-        // Handle other URIs or pass it to the default response
-        return super.serve(session)
     }
 
-    fun generateSecureApiKey(): String {
-        val characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?";
-        val apiKey = StringBuilder();
-        for (i in 0..48) {
-            val random = Random().nextInt(characters.length)
-            apiKey.append(characters[random])
-        }
-        return apiKey.toString();
-    }
+    companion object{
+        val apiKeysActive = mutableMapOf<String, String>()
+        val trustedIPs: MutableList<String> = WebPanel.plugin.config.getStringList("websites.apikey.permittedIPs")
 
-    fun isIpInRange(ip: String, range: String): Boolean {
-        val (startIp, endIp) = range.split("-")
-        val ipToLong = { ip: String -> ip.split(".").map { it.toLong() }.reduce { acc, i -> (acc shl 8) + i } }
-        return ipToLong(ip) in ipToLong(startIp)..ipToLong(endIp)
+        fun generateSecureApiKey(): String {
+            val characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?";
+            val apiKey = StringBuilder();
+            for (i in 0..48) {
+                val random = Random().nextInt(characters.length)
+                apiKey.append(characters[random])
+            }
+            return apiKey.toString();
+        }
+
+        fun isIpInRange(ip: String, range: String): Boolean {
+            val (startIp, endIp) = range.split("-")
+            val ipToLong = { ip: String -> ip.split(".").map { it.toLong() }.reduce { acc, i -> (acc shl 8) + i } }
+            return ipToLong(ip) in ipToLong(startIp)..ipToLong(endIp)
+        }
     }
 }
 

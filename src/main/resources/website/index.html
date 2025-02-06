@@ -33,7 +33,7 @@
 
     <script>
         function getConsole() {
-            fetch("/getConsoleOutput")
+            fetch("/api/getConsoleOutput")
                 .then(response => response.json()) // Parse the JSON response
                 .then(data => {
                     console.log(data);
@@ -51,7 +51,7 @@
             const command = inputField.value;
             if(command === "") return;
 
-            fetch("/getApiKey", {method: "GET"})
+            fetch("/api/getApiKey", {method: "GET"})
                 .then(async response => {
                     fetch("/api/sendToConsole", {
                         method: "POST",
@@ -71,9 +71,9 @@
         }
 
         function stopServer() {
-            fetch("/getApiKey", {method: "GET"})
+            fetch("/api/getApiKey", {method: "GET"})
                 .then(async response => {
-                    fetch("/stopServer", {
+                    fetch("/api/stopServer", {
                         method: "POST",
                         headers: {
                             "Authorization": `Bearer ${await response.text()}`
