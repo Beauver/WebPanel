@@ -6,9 +6,14 @@ import org.bukkit.plugin.java.JavaPlugin
 
 
 class WebPanel : JavaPlugin() {
-
+    
+    public static WebPanel plugin = null
+    PaperCommandManager manager
+    
     override fun onEnable() {
-        plugin = this;
+        if(plugin == null){
+            plugin = this
+        }
         val manager = PaperCommandManager(this)
 
         logger.info("|---------[ WebPanel ]---------|")
