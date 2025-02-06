@@ -7,14 +7,12 @@ import org.bukkit.plugin.java.JavaPlugin
 
 class WebPanel : JavaPlugin() {
     
-    public static WebPanel plugin = null
-    PaperCommandManager manager
+    lateinit var plugin: WebPanel
+    private lateinit var manager: PaperCommandManager
     
     override fun onEnable() {
-        if(plugin == null){
-            plugin = this
-        }
-        val manager = PaperCommandManager(this)
+        plugin = this
+        manager = PaperCommandManager(this)
 
         logger.info("|---------[ WebPanel ]---------|")
         logger.info("|                              |")
