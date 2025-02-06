@@ -1,6 +1,9 @@
 package com.beauver.minecraft.plugins.webPanel.Website
 
 import com.beauver.minecraft.plugins.webPanel.WebPanel
+import com.beauver.minecraft.plugins.webPanel.Website.Api.Public.GetPlayersAPI
+import com.beauver.minecraft.plugins.webPanel.Website.Pages.CSSPages
+import com.beauver.minecraft.plugins.webPanel.Website.Pages.HTMLPages
 import fi.iki.elonen.NanoHTTPD
 import org.bukkit.Bukkit
 import java.io.File
@@ -8,16 +11,16 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.nio.file.StandardCopyOption
 import java.util.*
 import kotlin.io.path.name
-import kotlin.io.path.pathString
 
 
-class TestWebsite() : NanoHTTPD(WebPanel.plugin.config.getInt("website.port")) {
+class PanelWebsite() : NanoHTTPD(WebPanel.plugin.config.getInt("website.port")) {
 
-    val apiKeysActive = mutableMapOf<String, String>()
-    val trustedIPs = WebPanel.plugin.config.getStringList("websites.apikey.permittedIPs")
+    companion object{
+        val apiKeysActive = mutableMapOf<String, String>()
+        val trustedIPs: MutableList<String> = WebPanel.plugin.config.getStringList("websites.apikey.permittedIPs")
+    }
 
     init {
         start(SOCKET_READ_TIMEOUT, false)
@@ -25,90 +28,17 @@ class TestWebsite() : NanoHTTPD(WebPanel.plugin.config.getInt("website.port")) {
     }
 
     override fun serve(session: IHTTPSession): Response {
-        // Serve the main HTML file
-        if (session.uri == "/" || session.uri == "/index.html") {
-            WebPanel::class.java.classLoader.getResourceAsStream("website/index.html")?.let { inputStream ->
-                return newFixedLengthResponse(Response.Status.OK, "text/html", inputStream, inputStream.available().toLong())
-            } ?: return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "File not found")
-        }
+        when (session.uri) {
+            "/", "/index.html", "/index", "/console", "/panel" -> return HTMLPages().serve("website/index.html")
+            "/players.html", "/players" -> return HTMLPages().serve("website/players.html")
+            "/files.html", "/files" -> return HTMLPages().serve("website/files.html")
 
-        if (session.uri == "/players.html") {
-            WebPanel::class.java.classLoader.getResourceAsStream("website/players.html")?.let { inputStream ->
-                return newFixedLengthResponse(Response.Status.OK, "text/html", inputStream, inputStream.available().toLong())
-            } ?: return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "File not found")
-        }
+            "/css/index.css" -> return CSSPages().serve("website/css/index.css")
+            "/css/files.css" -> return CSSPages().serve("website/css/files.css")
+            "/css/players.css" -> return CSSPages().serve("website/css/players.css")
 
-        if(session.uri == "/files.html"){
-            WebPanel::class.java.classLoader.getResourceAsStream("website/files.html")?.let { inputStream ->
-                return newFixedLengthResponse(Response.Status.OK, "text/html", inputStream, inputStream.available().toLong())
-            } ?: return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "File not found")
-        }
-
-        if (session.uri == "/css/index.css") {
-            // Serve the CSS file
-            WebPanel::class.java.classLoader.getResourceAsStream("website/css/index.css")?.let { inputStream ->
-                return newFixedLengthResponse(Response.Status.OK, "text/css", inputStream, inputStream.available().toLong())
-            } ?: return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "CSS file not found")
-        }
-        if (session.uri == "/css/files.css") {
-            // Serve the CSS file
-            WebPanel::class.java.classLoader.getResourceAsStream("website/css/files.css")?.let { inputStream ->
-                return newFixedLengthResponse(Response.Status.OK, "text/css", inputStream, inputStream.available().toLong())
-            } ?: return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "CSS file not found")
-        }
-        if (session.uri == "/css/players.css") {
-            // Serve the CSS file
-            WebPanel::class.java.classLoader.getResourceAsStream("website/css/players.css")?.let { inputStream ->
-                return newFixedLengthResponse(Response.Status.OK, "text/css", inputStream, inputStream.available().toLong())
-            } ?: return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "CSS file not found")
-        }
-
-        if (session.uri == "/getPlayers") {
-            // Example of player data
-            val players = mutableListOf<String>()
-
-            WebPanel.plugin.server.onlinePlayers.forEach {
-                players.add(it.name)
-            }
-
-            val playerCount = players.size
-            val jsonResponse = """{
-                "playerCount": $playerCount,
-                "maxPlayers": ${WebPanel.plugin.server.maxPlayers},
-                "players": [${players.joinToString(",") { "\"$it\"" }}]
-            }"""
-
-            return newFixedLengthResponse(Response.Status.OK, "application/json", jsonResponse)
-        }
-
-        if (session.uri == "/getConsoleOutput") {
-            val messages = mutableListOf<String>()
-
-            val logFilePath = Paths.get("logs/latest.log")
-            try {
-                Files.newBufferedReader(logFilePath).use { reader ->
-                    val lines = reader.readLines()
-                    val maxLines = WebPanel.plugin.config.getInt("website.console.maxlines")
-                    val start = if (lines.size > maxLines) lines.size - maxLines else 0
-                    for (i in start until lines.size) {
-                        messages.add(lines[i])
-                    }
-                }
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-
-            val jsonResponse = """{
-                "messages": [${messages.joinToString(",") { "\"${it.replace("\\", "\\\\")
-                    .replace("\"", "\\\"")
-                    .replace("\n", "\\n")
-                    .replace("\r", "\\r")
-                    .replace("\t", "\\t")
-                    .replace("\b", "\\b")
-                    .replace("\u000C", "\\f")}\"" }}]
-            }"""
-
-            return newFixedLengthResponse(Response.Status.OK, "application/json", jsonResponse)
+            "/api/getPlayers" -> return GetPlayersAPI().respond(session)
+            "/api/getConsoleOutput" -> return GetPlayersAPI().respond(session)
         }
 
         if (session.uri == "/sendToConsole" && session.method == Method.POST) {
