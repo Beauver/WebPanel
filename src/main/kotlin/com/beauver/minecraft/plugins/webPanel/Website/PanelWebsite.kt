@@ -2,10 +2,7 @@ package com.beauver.minecraft.plugins.webPanel.Website
 
 import com.beauver.minecraft.plugins.webPanel.WebPanel
 import com.beauver.minecraft.plugins.webPanel.Website.Api.Protected.*
-import com.beauver.minecraft.plugins.webPanel.Website.Api.Public.GetApiKeyAPI
-import com.beauver.minecraft.plugins.webPanel.Website.Api.Public.GetConsoleOutputAPI
-import com.beauver.minecraft.plugins.webPanel.Website.Api.Public.GetFilesAPI
-import com.beauver.minecraft.plugins.webPanel.Website.Api.Public.GetPlayersAPI
+import com.beauver.minecraft.plugins.webPanel.Website.Api.Public.*
 import com.beauver.minecraft.plugins.webPanel.Website.Pages.CSSPages
 import com.beauver.minecraft.plugins.webPanel.Website.Pages.HTMLPages
 import fi.iki.elonen.NanoHTTPD
@@ -44,6 +41,7 @@ class PanelWebsite() : NanoHTTPD(WebPanel.plugin.config.getInt("website.port")) 
             "/api/getApiKey" -> return GetApiKeyAPI().respond(session)
             "/api/getFiles" -> return GetFilesAPI().respond(session)
             "/api/downloadFile" -> return DownloadFileAPI().respond(session)
+            //"/api/getClientIp" -> return GetClientIPAPI().respond(session) //Was used for testing
 
             //POST
             "/api/sendToConsole" -> return SendToConsoleAPI().respond(session)
@@ -76,6 +74,15 @@ class PanelWebsite() : NanoHTTPD(WebPanel.plugin.config.getInt("website.port")) 
             val (startIp, endIp) = range.split("-")
             val ipToLong = { ip: String -> ip.split(".").map { it.toLong() }.reduce { acc, i -> (acc shl 8) + i } }
             return ipToLong(ip) in ipToLong(startIp)..ipToLong(endIp)
+        }
+
+        fun getClientIP(session: IHTTPSession): String? {
+            val headers = session.headers
+            val forwardedFor = headers["x-forwarded-for"]
+            if (!forwardedFor.isNullOrBlank()) {
+                return forwardedFor.split(",")[0].trim()
+            }
+            return session.remoteIpAddress
         }
     }
 }

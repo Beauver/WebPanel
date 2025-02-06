@@ -5,6 +5,7 @@ import com.beauver.minecraft.plugins.webPanel.Website.Api.WebPanelApi
 import com.beauver.minecraft.plugins.webPanel.Website.PanelWebsite
 import com.beauver.minecraft.plugins.webPanel.Website.PanelWebsite.Companion.apiKeysActive
 import com.beauver.minecraft.plugins.webPanel.Website.PanelWebsite.Companion.generateSecureApiKey
+import com.beauver.minecraft.plugins.webPanel.Website.PanelWebsite.Companion.getClientIP
 import com.beauver.minecraft.plugins.webPanel.Website.PanelWebsite.Companion.isIpInRange
 import com.beauver.minecraft.plugins.webPanel.Website.PanelWebsite.Companion.trustedIPs
 import fi.iki.elonen.NanoHTTPD.*
@@ -14,7 +15,7 @@ class GetApiKeyAPI : WebPanelApi {
     override val requestMethod: Method = Method.GET
 
     override fun respond(session: IHTTPSession): Response {
-        val ipAddress = session.headers["remote-addr"] ?: return newFixedLengthResponse(Response.Status.FORBIDDEN, "text/plain", "Forbidden")
+        val ipAddress = getClientIP(session) ?: return newFixedLengthResponse(Response.Status.FORBIDDEN, "text/plain", "Forbidden")
         if (!trustedIPs.any { it == ipAddress || (it.contains("-") && isIpInRange(ipAddress, it)) }) {
             return newFixedLengthResponse(Response.Status.UNAUTHORIZED, "text/plain", "Unauthorized")
         }
@@ -23,7 +24,7 @@ class GetApiKeyAPI : WebPanelApi {
     }
 
     override fun getData(session: IHTTPSession): String {
-        val ipAddress = session.headers["remote-addr"] ?: return "Forbidden";
+        val ipAddress = getClientIP(session) ?: return "Forbidden"
 
         val apiKey = generateSecureApiKey()
         apiKeysActive[ipAddress] = apiKey

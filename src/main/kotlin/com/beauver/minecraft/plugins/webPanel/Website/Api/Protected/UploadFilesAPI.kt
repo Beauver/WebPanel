@@ -42,6 +42,12 @@ class UploadFilesAPI : WebPanelApi {
             return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain", "Uploaded file does not exist")
         }
 
+        // Check file size (e.g., limit to 5MB)
+        val maxFileSize = WebPanel.plugin.config.getInt("api.uploadFile.maxSizeMb") * 1024 * 1024
+        if (tempFile.length() > maxFileSize) {
+            return newFixedLengthResponse(Response.Status.PAYLOAD_TOO_LARGE, "text/plain", "File size exceeds the limit of 5MB")
+        }
+
         val relativePath = parameters["path"]?.get(0) ?: ""
         val originalFileName = parameters["filename"]?.get(0) ?: tempFile.name
         val destinationPath = Paths.get(Bukkit.getWorldContainer().path.toString(), relativePath, originalFileName)
@@ -51,10 +57,9 @@ class UploadFilesAPI : WebPanelApi {
             tempFile.inputStream().use { input ->
                 Files.newOutputStream(destinationPath).use { output ->
                     input.copyTo(output)
+                    input.close()
                 }
             }
-
-            tempFile.delete()
 
         } catch (e: IOException) {
             e.printStackTrace()
@@ -63,4 +68,6 @@ class UploadFilesAPI : WebPanelApi {
 
         return newFixedLengthResponse(Response.Status.OK, "text/plain", "File uploaded successfully to $destinationPath")
     }
+
+
 }

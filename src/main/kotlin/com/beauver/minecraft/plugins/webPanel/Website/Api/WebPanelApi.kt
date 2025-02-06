@@ -1,6 +1,7 @@
 package com.beauver.minecraft.plugins.webPanel.Website.Api
 
 import com.beauver.minecraft.plugins.webPanel.Website.PanelWebsite
+import com.beauver.minecraft.plugins.webPanel.Website.PanelWebsite.Companion.getClientIP
 import fi.iki.elonen.NanoHTTPD.*
 
 interface WebPanelApi {
@@ -58,11 +59,12 @@ interface WebPanelApi {
      * @param session The session data
      * @return a response with the respective status code
      */
-    fun isAuthorized(session: IHTTPSession): Response{
+    fun isAuthorized(session: IHTTPSession): Response {
         val headers = session.headers
-        val apiKey = headers["authorization"]?.substringAfter("Bearer ") ?: return newFixedLengthResponse(Response.Status.UNAUTHORIZED, "text/plain", "Missing API Key")
+        val apiKey = headers["authorization"]?.substringAfter("Bearer ")
+            ?: return newFixedLengthResponse(Response.Status.UNAUTHORIZED, "text/plain", "Missing API Key")
 
-        val ipAddress = session.headers["remote-addr"] ?: return newFixedLengthResponse(Response.Status.FORBIDDEN, "text/plain", "Forbidden")
+        val ipAddress = getClientIP(session) ?: return newFixedLengthResponse(Response.Status.FORBIDDEN, "text/plain", "Forbidden")
 
         if (PanelWebsite.apiKeysActive[ipAddress] != apiKey) {
             return newFixedLengthResponse(Response.Status.UNAUTHORIZED, "text/plain", "Invalid API Key")
@@ -71,5 +73,6 @@ interface WebPanelApi {
             return newFixedLengthResponse(Response.Status.OK, "text/plain", "Authorized")
         }
     }
+
 
 }

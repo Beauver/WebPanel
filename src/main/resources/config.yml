@@ -7,3 +7,5 @@ website.apikey.timeoutSeconds: 3
 websites.apikey.permittedIPs:
   - "127.0.0.1"
   - "localhost"
+
+api.uploadFile.maxSizeMb: 10
