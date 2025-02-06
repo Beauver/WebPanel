@@ -9,6 +9,7 @@ class WebPanel : JavaPlugin() {
 
     override fun onEnable() {
         plugin = this;
+        val manager = PaperCommandManager(this)
 
         logger.info("|---------[ WebPanel ]---------|")
         logger.info("|                              |")
@@ -33,8 +34,6 @@ class WebPanel : JavaPlugin() {
     }
 
     private fun registerCommands(){
-        val manager = PaperCommandManager(this)
-
         logger.info("| Registered Commands          |")
     }
 
