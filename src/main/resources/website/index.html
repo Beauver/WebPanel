@@ -99,8 +99,24 @@
             console.log("Scrolled to bottom");
         }
 
+        function mayAccessAllPages() {
+            fetch(`/api/mayAccessAllPages`, {
+                method: "GET",
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if(data === false) {
+                        window.location.href = "/error/401";
+                    }
+                })
+                .catch(error => {
+                    console.error("Error loading config data:", error);
+                });
+        }
+
         // Call getConsole to load console output when the page loads
         window.onload = function() {
+            mayAccessAllPages();
             getConsole();
             scrollToBottomOfConsole();
             setInterval(getConsole, 1000);

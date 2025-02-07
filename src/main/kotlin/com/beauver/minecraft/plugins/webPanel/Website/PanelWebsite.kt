@@ -29,6 +29,7 @@ class PanelWebsite() : NanoHTTPD(WebPanel.plugin.config.getInt("website.port")) 
             "/", "/index.html", "/index", "/console", "/panel" -> return HTMLPages().serve("website/index.html")
             "/players.html", "/players" -> return HTMLPages().serve("website/players.html")
             "/files.html", "/files" -> return HTMLPages().serve("website/files.html")
+            "/error/401" -> return HTMLPages().serve("website/error/401.html")
 
             //CSS Pages
             "/css/index.css" -> return CSSPages().serve("website/css/index.css")
@@ -41,6 +42,7 @@ class PanelWebsite() : NanoHTTPD(WebPanel.plugin.config.getInt("website.port")) 
             "/api/getApiKey" -> return GetApiKeyAPI().respond(session)
             "/api/getFiles" -> return GetFilesAPI().respond(session)
             "/api/downloadFile" -> return DownloadFileAPI().respond(session)
+            "/api/mayAccessAllPages" -> return MayAccessWebsiteAPI().respond(session)
             //"/api/getClientIp" -> return GetClientIPAPI().respond(session) //Was used for testing
 
             //POST

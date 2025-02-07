@@ -230,8 +230,26 @@
                     });
             }
 
+            function mayAccessAllPages() {
+                fetch(`/api/mayAccessAllPages`, {
+                    method: "GET",
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if(data === false) {
+                            window.location.href = "/error/401";
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error loading config data:", error);
+                    });
+            }
+
             // Call the function to load files when the page loads
-            window.onload = () => loadFiles(".");
+            window.onload = function () {
+                mayAccessAllPages();
+                loadFiles(".");
+            };
         </script>
 
 </html>
