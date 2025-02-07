@@ -1,11 +1,13 @@
 website.port: 32000
 website.console.maxlines: 1000
 
+website.mayOpenIfNotPermittedIPList: true
 website.apikey.timeoutSeconds: 3
 #Add your private/public IP-address here.
 #You can add an IP-Range by doing "192.168.1.1-192.168.1.255"
 websites.apikey.permittedIPs:
   - "127.0.0.1"
   - "localhost"
+
 
 api.uploadFile.maxSizeMb: 10
