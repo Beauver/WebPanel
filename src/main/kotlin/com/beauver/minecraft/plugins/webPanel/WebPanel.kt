@@ -6,13 +6,18 @@ import org.bukkit.plugin.java.JavaPlugin
 
 
 class WebPanel : JavaPlugin() {
-
+    
+    lateinit var plugin: WebPanel
+    private lateinit var manager: PaperCommandManager
+    
     override fun onEnable() {
+        plugin = this
+        manager = PaperCommandManager(this)
+
         logger.info("|---------[ WebPanel ]---------|")
         logger.info("|                              |")
 
         saveDefaultConfig()
-        plugin = this;
 
         // Plugin startup logic
         registerCommands()
@@ -32,8 +37,6 @@ class WebPanel : JavaPlugin() {
     }
 
     private fun registerCommands(){
-        val manager = PaperCommandManager(this)
-
         logger.info("| Registered Commands          |")
     }
 
