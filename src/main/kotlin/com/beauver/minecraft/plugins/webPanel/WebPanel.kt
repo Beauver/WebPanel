@@ -7,7 +7,6 @@ import org.bukkit.plugin.java.JavaPlugin
 
 class WebPanel : JavaPlugin() {
     
-    lateinit var plugin: WebPanel
     private lateinit var manager: PaperCommandManager
     
     override fun onEnable() {
