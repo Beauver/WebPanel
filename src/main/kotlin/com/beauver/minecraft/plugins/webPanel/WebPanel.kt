@@ -1,7 +1,7 @@
 package com.beauver.minecraft.plugins.webPanel
 
 import co.aikar.commands.PaperCommandManager
-import com.beauver.minecraft.plugins.webPanel.Website.TestWebsite
+import com.beauver.minecraft.plugins.webPanel.Website.PanelWebsite
 import org.bukkit.plugin.java.JavaPlugin
 
 
@@ -46,7 +46,7 @@ class WebPanel : JavaPlugin() {
     private fun registerWebsites(){
 
         Thread {
-            TestWebsite();
+            PanelWebsite();
         }.start()
 
         logger.info("| Registered Website           |")
